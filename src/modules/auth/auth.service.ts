@@ -7,27 +7,53 @@ import {
 } from '../../utils/jwt';
 
 export const registerUser = async (data: any) => {
-  const { name, email, password } = data;
+  const client = await pool.connect();
 
-  const existing = await pool.query(
-    'SELECT * FROM users WHERE email = $1',
-    [email]
-  );
+  try {
+    const { name, email, password, role } = data;
 
-  if (existing.rows.length) {
-    throw new Error('Email already exists');
+    await client.query('BEGIN');
+
+    // Check existing user
+    const existing = await client.query(
+      'SELECT 1 FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (existing.rows.length) {
+      throw new Error('Email already exists');
+    }
+
+    // Hash password
+    const hashed = await hashPassword(password);
+
+    // Insert user
+    const userResult = await client.query(
+      `INSERT INTO users (id, email, password, name, role)
+       VALUES (uuid_generate_v4(), $1, $2, $3, $4)
+       RETURNING *`,
+      [email, hashed, name, role]
+    );
+
+    const user = userResult.rows[0];
+
+    // Insert profile (empty/default)
+    await client.query(
+      `INSERT INTO profile (id, user_id)
+       VALUES (uuid_generate_v4(), $1)`,
+      [user.id]
+    );
+
+    await client.query('COMMIT');
+
+    return user;
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  const hashed = await hashPassword(password);
-
-  const user = await pool.query(
-    `INSERT INTO users (id, email, password)
-     VALUES (uuid_generate_v4(), $1, $2)
-     RETURNING *`,
-    [email, hashed]
-  );
-
-  return user.rows[0];
 };
 
 export const loginUser = async (email: string, password: string) => {
