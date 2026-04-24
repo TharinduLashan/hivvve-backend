@@ -10,7 +10,7 @@ export const registerUser = async (data: any) => {
   const client = await pool.connect();
 
   try {
-    const { email, password, role = 'homeowner' } = data;
+    const { email, password, name, role = 'homeowner' } = data;
 
     await client.query('BEGIN');
 
@@ -34,10 +34,15 @@ export const registerUser = async (data: any) => {
 
     const user = userResult.rows[0];
 
+    const parts = name.trim().split(" ");
+
+    const firstName = parts[0];
+    const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+
     await client.query(
-      `INSERT INTO profile (id, user_id)
-       VALUES (uuid_generate_v4(), $1)`,
-      [user.id]
+      `INSERT INTO profile (id, user_id, firstName, lastName)
+       VALUES (uuid_generate_v4(), $1, $2, $3)`,
+      [user.id, firstName, lastName]
     );
 
     await client.query('COMMIT');
