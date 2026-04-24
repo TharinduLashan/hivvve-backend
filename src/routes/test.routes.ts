@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { testDB } from '../controllers/test.controller';
+import { testApi, testDB } from '../controllers/test.controller';
 
 const router = Router();
 
-router.get('/api-test', testDB);
+router.get('/api-test', testApi);
 
 router.get('/db-test', testDB);
 
