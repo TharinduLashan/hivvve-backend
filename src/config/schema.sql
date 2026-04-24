@@ -91,34 +91,58 @@ CREATE TABLE profile (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE profiles (
+
+CREATE TABLE services (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(100) UNIQUE NOT NULL
+);
+
+ALTER TABLE users ADD COLUMN service_id UUID REFERENCES services(id);
+
+CREATE TABLE user_services (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  service_id UUID REFERENCES services(id) ON DELETE CASCADE,
+
+  UNIQUE(user_id, service_id)
+);
+
+CREATE TABLE providers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT,
+  place_id TEXT, -- Google Places ID
+  service_id UUID REFERENCES services(id)
+);
+
+CREATE TABLE homeowner_providers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+  homeowner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  provider_id UUID REFERENCES providers(id) ON DELETE CASCADE,
+
+  service_id UUID REFERENCES services(id),
+
+  endorsement TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE professional_profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
 
-  -- Name
-  first_name VARCHAR(100),
-  last_name VARCHAR(100),
-
-  -- Location
-  zip_code VARCHAR(10),
-  city VARCHAR(100),
-  county VARCHAR(100),
-  state VARCHAR(100),
-
-  -- Status
-  is_completed BOOLEAN DEFAULT FALSE,
-
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE profile_providers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-
-  category VARCHAR(100) NOT NULL,
-  provider_name TEXT NOT NULL,
-  google_place_id TEXT,
+  business_name TEXT,
+  service_id UUID REFERENCES services(id),
+  description TEXT,
+  website TEXT,
+  logo_url TEXT,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE professional_service_areas (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  professional_id UUID REFERENCES users(id) ON DELETE CASCADE,
+
+  zip_code VARCHAR(10)
 );

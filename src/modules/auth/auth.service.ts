@@ -14,7 +14,6 @@ export const registerUser = async (data: any) => {
 
     await client.query('BEGIN');
 
-    // Check existing (case-insensitive)
     const existing = await client.query(
       'SELECT 1 FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
@@ -48,7 +47,6 @@ export const registerUser = async (data: any) => {
   } catch (error: any) {
     await client.query('ROLLBACK');
 
-    // Handle duplicate safely
     if (error.code === '23505') {
       throw new Error('Email already exists');
     }
@@ -69,12 +67,10 @@ export const loginUser = async (email: string, password: string) => {
 
   const user = userRes.rows[0];
 
-  // Block inactive users
   if (!user.is_active || user.is_blocked) {
     throw new Error('Account is inactive');
   }
 
-  // Social-only account
   if (!user.password) {
     throw new Error('Use social login');
   }
@@ -83,11 +79,9 @@ export const loginUser = async (email: string, password: string) => {
 
   if (!isValid) throw new Error('Invalid credentials');
 
-  // Generate tokens
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
 
-  // Hash refresh token before storing
   const hashedRefreshToken = await hashPassword(refreshToken);
 
   await pool.query(
@@ -96,7 +90,6 @@ export const loginUser = async (email: string, password: string) => {
     [user.id, hashedRefreshToken]
   );
 
-  // Update last login
   await pool.query(
     'UPDATE users SET last_login = NOW() WHERE id = $1',
     [user.id]
@@ -115,7 +108,6 @@ export const loginUser = async (email: string, password: string) => {
 };
 
 export const refreshAccessToken = async (refreshToken: string) => {
-  // Get all valid tokens (you compare hash manually)
   const tokensRes = await pool.query(
     `SELECT * FROM refresh_tokens 
      WHERE is_revoked = false 
@@ -145,7 +137,6 @@ export const refreshAccessToken = async (refreshToken: string) => {
 
   const user = userRes.rows[0];
 
-  // Rotate refresh token (recommended)
   await pool.query(
     'UPDATE refresh_tokens SET is_revoked = true WHERE id = $1',
     [matchedToken.id]

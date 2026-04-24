@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { completeOnboarding, getMyProfile } from "../modules/profile/profile.service";
+import { completeOnboarding, getMyProfile, updateProfile } from "../modules/profile/profile.service";
 
 export const completeOnboardingController = async (req: any, res: any) => {
   try {
@@ -19,6 +19,20 @@ export const getMyProfileController = async (req: any, res: Response) => {
 
     console.log('userId:', userId);
     const profile = await getMyProfile(userId);
+
+    res.json(profile);
+  } catch (err: any) {
+    console.log(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const updateProfileController = async (req: any, res: Response) => {
+  try {
+    const userId = req.user.userId;
+
+    console.log('userId:', userId);
+    const profile = await updateProfile(userId, req.body);
 
     res.json(profile);
   } catch (err: any) {
