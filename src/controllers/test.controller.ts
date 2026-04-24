@@ -20,3 +20,22 @@ export const testDB = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const testApi = async (req: Request, res: Response) => {
+  try {
+
+    res.json({
+      success: true,
+      message: 'Server connected successfully ✅',
+      time: new Date(),
+    });
+  } catch (error: any) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Server connection failed',
+      error: error.message,
+    });
+  }
+};
