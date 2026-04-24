@@ -4,7 +4,6 @@ CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
   -- Basic Info
-  name VARCHAR(100) NOT NULL,
   email VARCHAR(150) UNIQUE (LOWER(email)) NOT NULL,
   password TEXT, -- NULL if social login only
 

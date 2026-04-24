@@ -10,7 +10,7 @@ export const registerUser = async (data: any) => {
   const client = await pool.connect();
 
   try {
-    const { name, email, password, role = 'homeowner' } = data;
+    const { email, password, role = 'homeowner' } = data;
 
     await client.query('BEGIN');
 
@@ -27,13 +27,19 @@ export const registerUser = async (data: any) => {
     const hashedPassword = await hashPassword(password);
 
     const userResult = await client.query(
-      `INSERT INTO users (id, email, password, name, role, is_email_verified)
+      `INSERT INTO users (id, email, password, role, is_email_verified)
        VALUES (uuid_generate_v4(), LOWER($1), $2, $3, $4, false)
-       RETURNING id, email, name, role, created_at`,
-      [email, hashedPassword, name, role]
+       RETURNING id, email, role, created_at`,
+      [email, hashedPassword, role]
     );
 
     const user = userResult.rows[0];
+
+    await client.query(
+      `INSERT INTO profile (id, user_id)
+       VALUES (uuid_generate_v4(), $1)`,
+      [user.id]
+    );
 
     await client.query('COMMIT');
 
@@ -108,18 +114,27 @@ export const loginUser = async (email: string, password: string) => {
   };
 };
 
-export const refreshAccessToken = async (token: string) => {
-  const stored = await pool.query(
+export const refreshAccessToken = async (refreshToken: string) => {
+  // Get all valid tokens (you compare hash manually)
+  const tokensRes = await pool.query(
     `SELECT * FROM refresh_tokens 
-     WHERE token = $1 
-     AND is_revoked = false 
-     AND expires_at > NOW()`,
-    [token]
+     WHERE is_revoked = false 
+     AND expires_at > NOW()`
   );
 
-  if (!stored.rows.length) throw new Error('Invalid refresh token');
+  let matchedToken = null;
 
-  const decoded: any = verifyRefreshToken(token);
+  for (const tokenRow of tokensRes.rows) {
+    const isMatch = await comparePassword(refreshToken, tokenRow.token);
+    if (isMatch) {
+      matchedToken = tokenRow;
+      break;
+    }
+  }
+
+  if (!matchedToken) throw new Error('Invalid refresh token');
+
+  const decoded: any = verifyRefreshToken(refreshToken);
 
   const userRes = await pool.query(
     'SELECT * FROM users WHERE id = $1',
@@ -128,14 +143,36 @@ export const refreshAccessToken = async (token: string) => {
 
   if (!userRes.rows.length) throw new Error('User not found');
 
-  const newAccessToken = generateAccessToken(userRes.rows[0]);
+  const user = userRes.rows[0];
 
-  return { accessToken: newAccessToken };
+  // Rotate refresh token (recommended)
+  await pool.query(
+    'UPDATE refresh_tokens SET is_revoked = true WHERE id = $1',
+    [matchedToken.id]
+  );
+
+  const newAccessToken = generateAccessToken(user);
+  const newRefreshToken = generateRefreshToken(user);
+
+  return {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  };
 };
 
-export const logoutUser = async (token: string) => {
-  await pool.query(
-    'UPDATE refresh_tokens SET is_revoked = true WHERE token = $1',
-    [token]
+export const logoutUser = async (refreshToken: string) => {
+  const tokensRes = await pool.query(
+    'SELECT * FROM refresh_tokens WHERE is_revoked = false'
   );
+
+  for (const tokenRow of tokensRes.rows) {
+    const isMatch = await comparePassword(refreshToken, tokenRow.token);
+    if (isMatch) {
+      await pool.query(
+        'UPDATE refresh_tokens SET is_revoked = true WHERE id = $1',
+        [tokenRow.id]
+      );
+      break;
+    }
+  }
 };
