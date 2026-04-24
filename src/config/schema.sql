@@ -1,40 +1,35 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
-  -- Basic Info
-  email VARCHAR(150) UNIQUE (LOWER(email)) NOT NULL,
-  password TEXT, -- NULL if social login only
+  email VARCHAR(150) NOT NULL,
+  password TEXT,
 
-  -- Role
   role VARCHAR(20) DEFAULT 'homeowner',
-  -- homeowner | professional | admin
 
-  -- Profile
   avatar_url TEXT,
   phone VARCHAR(20),
 
-  -- Location
   location TEXT,
   latitude DECIMAL(10,8),
   longitude DECIMAL(11,8),
 
-  -- Verification & Security
   is_email_verified BOOLEAN DEFAULT FALSE,
   is_phone_verified BOOLEAN DEFAULT FALSE,
   two_factor_enabled BOOLEAN DEFAULT FALSE,
 
-  -- Status
   is_active BOOLEAN DEFAULT TRUE,
   is_blocked BOOLEAN DEFAULT FALSE,
   is_onboarded BOOLEAN DEFAULT FALSE,
 
-  -- Tracking
   last_login TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Case-insensitive unique index
+CREATE UNIQUE INDEX users_email_unique_idx
+ON users (LOWER(email));
 
 CREATE TABLE user_providers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
