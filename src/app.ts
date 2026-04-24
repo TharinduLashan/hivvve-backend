@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import testRoutes from './routes/test.routes'; 
 import authRoutes from './routes/auth.routes';
-import onboardingRoutes from './routes/onboarding.routes';
+import profileRoutes from './routes/profile.routes';
 
 const app = express();
 
@@ -17,7 +17,7 @@ app.use('/api', testRoutes);
 
 app.use('/api/auth', authRoutes);
 
-app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/profile', profileRoutes);
 
 // app.use('/api/users', authMiddleware, userRoutes); // protected
 

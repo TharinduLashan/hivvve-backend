@@ -5,7 +5,7 @@ CREATE TABLE users (
 
   -- Basic Info
   name VARCHAR(100) NOT NULL,
-  email VARCHAR(150) UNIQUE NOT NULL,
+  email VARCHAR(150) UNIQUE (LOWER(email)) NOT NULL,
   password TEXT, -- NULL if social login only
 
   -- Role
@@ -29,7 +29,7 @@ CREATE TABLE users (
   -- Status
   is_active BOOLEAN DEFAULT TRUE,
   is_blocked BOOLEAN DEFAULT FALSE,
-  is_onboarded BOOLEAN DEFAULT FALSE;
+  is_onboarded BOOLEAN DEFAULT FALSE,
 
   -- Tracking
   last_login TIMESTAMP,
@@ -42,12 +42,16 @@ CREATE TABLE user_providers (
 
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
 
-  provider VARCHAR(50) NOT NULL, -- google, facebook, apple
-  provider_id TEXT NOT NULL,
+  provider VARCHAR(20) NOT NULL,
+  provider_user_id TEXT NOT NULL,
+
+  provider_email TEXT,
+  provider_data JSONB,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-  UNIQUE(provider, provider_id)
+  UNIQUE(provider, provider_user_id),
+  UNIQUE(user_id, provider)
 );
 
 CREATE TABLE refresh_tokens (
