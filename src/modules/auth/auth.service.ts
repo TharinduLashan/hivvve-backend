@@ -132,3 +132,10 @@ export const refreshAccessToken = async (token: string) => {
 
   return { accessToken: newAccessToken };
 };
+
+export const logoutUser = async (token: string) => {
+  await pool.query(
+    'UPDATE refresh_tokens SET is_revoked = true WHERE token = $1',
+    [token]
+  );
+};
